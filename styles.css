@@ -113,8 +113,8 @@ body {
 }
 
 .gallery .video-card {
-    flex: 0 1 calc(33.333% - 1rem);
-    min-width: 300px;
+    flex: 0 1 calc(25% - 1.125rem);
+    min-width: 280px;
     max-width: 100%;
 }
 

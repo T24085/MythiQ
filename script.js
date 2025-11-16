@@ -181,16 +181,24 @@ function closeModal() {
 // Sort and organize videos: shorts first, then regular videos
 function organizeVideos(videos) {
     // Separate shorts and regular videos
-    const shorts = videos.filter(v => v.type === 'shorts' || v.type === 'Short');
-    const regularVideos = videos.filter(v => v.type === 'video' || v.type === 'Video' || (!v.type || (v.type !== 'shorts' && v.type !== 'Short')));
+    const shorts = videos.filter(v => {
+        const type = v.type?.toLowerCase();
+        return type === 'shorts' || type === 'short';
+    });
+    const regularVideos = videos.filter(v => {
+        const type = v.type?.toLowerCase();
+        return type === 'video' || !type || (type !== 'shorts' && type !== 'short');
+    });
     
     console.log('Organizing videos:', {
         total: videos.length,
         shorts: shorts.length,
-        regular: regularVideos.length
+        regular: regularVideos.length,
+        firstShort: shorts[0]?.id,
+        firstRegular: regularVideos[0]?.id
     });
     
-    // Return shorts first, then regular videos
+    // Return shorts first, then regular videos (maintain original order within each group)
     return [...shorts, ...regularVideos];
 }
 
@@ -223,8 +231,7 @@ async function loadVideos() {
         // Organize videos: shorts first, then regular videos
         const organizedVideos = organizeVideos(videos);
         
-        // Create and append cards in organized order
-        // Add a data attribute to help with ordering
+        // Create and append cards in organized order (shorts first)
         organizedVideos.forEach((video, index) => {
             const card = createVideoCard(video);
             card.setAttribute('data-order', index);
@@ -237,8 +244,9 @@ async function loadVideos() {
         // On error, use fallback videos
         gallery.innerHTML = '';
         const organizedVideos = organizeVideos(FALLBACK_VIDEOS);
-        organizedVideos.forEach(video => {
+        organizedVideos.forEach((video, index) => {
             const card = createVideoCard(video);
+            card.setAttribute('data-order', index);
             gallery.appendChild(card);
         });
         loading.style.display = 'none';
