@@ -153,6 +153,38 @@ body {
     border-color: rgba(99, 102, 241, 0.6);
 }
 
+.delete-video-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.3s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.delete-video-btn:hover {
+    background: rgba(239, 68, 68, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.delete-video-btn:active {
+    transform: scale(0.95);
+}
+
 .video-thumbnail {
     width: 100%;
     height: 100%;

@@ -1,5 +1,5 @@
 // Import Firebase functions
-import { collection, addDoc, getDocs, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, Timestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const db = window.db;
@@ -137,9 +137,25 @@ function createVideoCard(video) {
     info.appendChild(type);
     overlay.appendChild(info);
     
+    // Delete button (only visible to admins)
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'delete-video-btn';
+    deleteButton.innerHTML = '×';
+    deleteButton.title = 'Delete video';
+    deleteButton.style.display = isAdmin() ? 'flex' : 'none';
+    
+    // Stop click propagation so delete button doesn't trigger video play
+    deleteButton.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm('Are you sure you want to delete this video?')) {
+            await deleteVideo(video);
+        }
+    });
+    
     card.appendChild(thumbnail);
     card.appendChild(playButton);
     card.appendChild(overlay);
+    card.appendChild(deleteButton);
 
     card.addEventListener('click', () => openModal(video.id, video.type));
 
@@ -256,6 +272,43 @@ function isAdmin() {
     return user && user.uid === ADMIN_UID;
 }
 
+// Delete video from Firebase
+async function deleteVideo(video) {
+    // Check authentication
+    if (!isAdmin()) {
+        alert('You must be logged in as admin to delete videos.');
+        return;
+    }
+    
+    try {
+        // Find the document ID in Firebase
+        const videosRef = collection(db, 'videos');
+        const q = query(videosRef);
+        const querySnapshot = await getDocs(q);
+        
+        let docId = null;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.id === video.id) {
+                docId = doc.id;
+            }
+        });
+        
+        if (docId) {
+            await deleteDoc(doc(db, 'videos', docId));
+            // Reload videos to update the gallery
+            await loadVideos();
+        } else {
+            // If not found in Firebase, it might be a fallback video
+            console.log('Video not found in Firebase, may be a fallback video');
+            alert('Video not found in database. It may be a fallback video that cannot be deleted.');
+        }
+    } catch (error) {
+        console.error('Error deleting video:', error);
+        alert('Failed to delete video. Please try again.');
+    }
+}
+
 // Update UI based on authentication state
 function updateAuthUI(user) {
     const addVideoBtn = document.getElementById('addVideoBtn');
@@ -273,6 +326,12 @@ function updateAuthUI(user) {
         loginBtn.style.display = 'block';
         logoutBtn.style.display = 'none';
     }
+    
+    // Update delete buttons on all video cards
+    const deleteButtons = document.querySelectorAll('.delete-video-btn');
+    deleteButtons.forEach(btn => {
+        btn.style.display = (user && user.uid === ADMIN_UID) ? 'flex' : 'none';
+    });
 }
 
 // Add video to Firebase
