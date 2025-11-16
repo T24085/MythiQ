@@ -1,27 +1,43 @@
-// YouTube video data - extracted from provided URLs
-const videos = [
-    { id: 'aT3UkaEc-FA', type: 'video', title: 'Ancient Art Animation 1' },
-    { id: 'H2DdT9jxkq4', type: 'video', title: 'Ancient Art Animation 2' },
-    { id: 'vfVGUEnBVmA', type: 'video', title: 'Ancient Art Animation 3' },
-    { id: 'oDzpjwDEGI0', type: 'video', title: 'Ancient Art Animation 4' },
-    { id: 'u7EmRd0GLhQ', type: 'shorts', title: 'Ancient Art Short 1' },
-    { id: 'u-4QAEbLzDc', type: 'shorts', title: 'Ancient Art Short 2' },
-    { id: 'gnim33uJxzo', type: 'shorts', title: 'Ancient Art Short 3' },
-    { id: 'hDqcPVimlRU', type: 'shorts', title: 'Ancient Art Short 4' },
-    { id: 'mm410EAjU9k', type: 'shorts', title: 'Ancient Art Short 5' },
-    { id: 'TmGP4hk5PXs', type: 'shorts', title: 'Ancient Art Short 6' },
-    { id: 'NhfekOfB2KE', type: 'shorts', title: 'Ancient Art Short 7' },
-    { id: '5GB-vBxK8B8', type: 'shorts', title: 'Ancient Art Short 8' },
-    { id: 'Fm01PhdwcJ0', type: 'shorts', title: 'Ancient Art Short 9' },
-    { id: 'g9WxDb2LtkQ', type: 'video', title: 'Ancient Art Animation 5' },
-    { id: 'B1SXLTCgQZw', type: 'shorts', title: 'Ancient Art Short 10' },
-    { id: 'eJV6linf5rM', type: 'shorts', title: 'Ancient Art Short 11' },
-    { id: 'vtOYyp8PiMQ', type: 'shorts', title: 'Ancient Art Short 12' },
-    { id: 'q7ixw5acIRc', type: 'shorts', title: 'Ancient Art Short 13' }
-];
+// Import Firebase functions
+import { collection, addDoc, getDocs, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const db = window.db;
+const auth = window.auth;
+
+// Admin UID - only this user can add videos
+const ADMIN_UID = 'AYILIKEKTUdizKXwNLKLrj2MDVT2';
+
+// Extract YouTube video ID from various URL formats
+function extractVideoId(url) {
+    if (!url) return null;
+    
+    // Regular video: https://youtube.com/watch?v=VIDEO_ID
+    // Shorts: https://youtube.com/shorts/VIDEO_ID
+    // Short format: https://youtu.be/VIDEO_ID
+    
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    
+    return null;
+}
+
+// Determine if video is a Short (9:16) or regular video (16:9)
+function detectVideoType(url) {
+    if (url.includes('/shorts/')) {
+        return 'shorts';
+    }
+    return 'video';
+}
 
 // Get YouTube thumbnail URLs in order of preference
-// Start with hqdefault as it's most reliable, then try higher quality
 function getThumbnailUrls(videoId) {
     return [
         `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
@@ -38,7 +54,6 @@ function loadThumbnailWithFallback(img, videoId) {
     
     function tryNextUrl() {
         if (currentIndex >= urls.length) {
-            // All fallbacks failed, show placeholder
             img.style.backgroundColor = '#2a2a2a';
             img.style.display = 'flex';
             img.style.alignItems = 'center';
@@ -47,28 +62,22 @@ function loadThumbnailWithFallback(img, videoId) {
             return;
         }
         
-        // Set up error handler before changing src
         img.onerror = function() {
             currentIndex++;
             tryNextUrl();
         };
         img.onload = function() {
-            // Successfully loaded, remove error handler
             img.onerror = null;
             img.onload = null;
         };
-        // Try loading this URL
         img.src = urls[currentIndex];
     }
     
-    // Start with first URL
     tryNextUrl();
 }
 
 // Get YouTube embed URL
 function getEmbedUrl(videoId, type = 'video') {
-    // Both regular videos and shorts use the same embed format
-    // Simplified URL without origin to avoid CORS issues when running locally
     return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
 }
 
@@ -83,7 +92,6 @@ function createVideoCard(video) {
     thumbnail.className = 'video-thumbnail';
     thumbnail.alt = video.title;
     thumbnail.loading = 'lazy';
-    // Load thumbnail with automatic fallback chain
     loadThumbnailWithFallback(thumbnail, video.id);
 
     const playButton = document.createElement('div');
@@ -97,7 +105,7 @@ function createVideoCard(video) {
     
     const title = document.createElement('div');
     title.className = 'video-title';
-    title.textContent = video.title;
+    title.textContent = video.title || 'Untitled Video';
     
     const type = document.createElement('div');
     type.className = 'video-type';
@@ -111,7 +119,6 @@ function createVideoCard(video) {
     card.appendChild(playButton);
     card.appendChild(overlay);
 
-    // Add click event to open modal
     card.addEventListener('click', () => openModal(video.id, video.type));
 
     return card;
@@ -119,19 +126,13 @@ function createVideoCard(video) {
 
 // Open modal with video
 function openModal(videoId, type) {
-    console.log('Opening modal for video:', videoId, type);
     const modal = document.getElementById('modal');
     const videoContainer = document.getElementById('videoContainer');
     
-    // Clear previous content
     videoContainer.innerHTML = '';
     
-    // Create iframe with proper attributes
     const iframe = document.createElement('iframe');
-    const embedUrl = getEmbedUrl(videoId, type);
-    console.log('Embed URL:', embedUrl);
-    
-    iframe.src = embedUrl;
+    iframe.src = getEmbedUrl(videoId, type);
     iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
     iframe.setAttribute('allowfullscreen', 'true');
     iframe.setAttribute('frameborder', '0');
@@ -140,18 +141,8 @@ function openModal(videoId, type) {
     iframe.style.height = '100%';
     iframe.style.border = 'none';
     
-    // Add error handling
-    iframe.onload = function() {
-        console.log('Iframe loaded successfully');
-    };
-    iframe.onerror = function() {
-        console.error('Error loading iframe');
-    };
-    
     videoContainer.appendChild(iframe);
     modal.classList.add('active');
-    
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
 }
 
@@ -162,40 +153,305 @@ function closeModal() {
     
     modal.classList.remove('active');
     videoContainer.innerHTML = '';
-    
-    // Restore body scroll
     document.body.style.overflow = 'auto';
 }
 
-// Initialize gallery
-function initGallery() {
+// Load videos from Firebase
+async function loadVideos() {
     const gallery = document.getElementById('gallery');
+    const loading = document.getElementById('loading');
     
-    videos.forEach(video => {
-        const card = createVideoCard(video);
-        gallery.appendChild(card);
+    try {
+        const videosRef = collection(db, 'videos');
+        const q = query(videosRef, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        
+        gallery.innerHTML = '';
+        
+        if (querySnapshot.empty) {
+            gallery.innerHTML = '<div class="loading">No videos yet. Click "Add Video" to get started!</div>';
+            return;
+        }
+        
+        querySnapshot.forEach((doc) => {
+            const video = { id: doc.id, ...doc.data() };
+            const card = createVideoCard(video);
+            gallery.appendChild(card);
+        });
+        
+        loading.style.display = 'none';
+    } catch (error) {
+        console.error('Error loading videos:', error);
+        gallery.innerHTML = '<div class="loading" style="color: #ef4444;">Error loading videos. Please refresh the page.</div>';
+        loading.style.display = 'none';
+    }
+}
+
+// Check if user is authenticated and is admin
+function isAdmin() {
+    const user = auth.currentUser;
+    return user && user.uid === ADMIN_UID;
+}
+
+// Update UI based on authentication state
+function updateAuthUI(user) {
+    const addVideoBtn = document.getElementById('addVideoBtn');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (user && user.uid === ADMIN_UID) {
+        // User is authenticated and is admin
+        addVideoBtn.style.display = 'block';
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'block';
+    } else {
+        // User is not authenticated or not admin
+        addVideoBtn.style.display = 'none';
+        loginBtn.style.display = 'block';
+        logoutBtn.style.display = 'none';
+    }
+}
+
+// Add video to Firebase
+async function addVideo(url, title = '') {
+    // Check authentication
+    if (!isAdmin()) {
+        throw new Error('You must be logged in as admin to add videos.');
+    }
+    
+    const videoId = extractVideoId(url);
+    
+    if (!videoId) {
+        throw new Error('Invalid YouTube URL. Please check the URL and try again.');
+    }
+    
+    const type = detectVideoType(url);
+    const videoData = {
+        id: videoId,
+        type: type,
+        title: title || `Video ${videoId}`,
+        url: url,
+        createdAt: Timestamp.now()
+    };
+    
+    try {
+        await addDoc(collection(db, 'videos'), videoData);
+        return true;
+    } catch (error) {
+        console.error('Error adding video:', error);
+        throw new Error('Failed to add video. Please try again.');
+    }
+}
+
+// Setup login form
+function setupLoginForm() {
+    const loginBtn = document.getElementById('loginBtn');
+    const loginModal = document.getElementById('loginModal');
+    const closeLoginModal = document.getElementById('closeLoginModal');
+    const cancelLoginBtn = document.getElementById('cancelLoginBtn');
+    const loginForm = document.getElementById('loginForm');
+    const loginMessage = document.getElementById('loginMessage');
+    
+    // Open login modal
+    loginBtn.addEventListener('click', () => {
+        loginModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+    
+    // Close login modal
+    const closeLoginModalFunc = () => {
+        loginModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+        loginForm.reset();
+        loginMessage.className = 'form-message';
+        loginMessage.textContent = '';
+    };
+    
+    closeLoginModal.addEventListener('click', closeLoginModalFunc);
+    cancelLoginBtn.addEventListener('click', closeLoginModalFunc);
+    
+    loginModal.addEventListener('click', (e) => {
+        if (e.target.id === 'loginModal') {
+            closeLoginModalFunc();
+        }
+    });
+    
+    // Handle login form submission
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPassword');
+        const submitBtn = loginForm.querySelector('button[type="submit"]');
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Logging in...';
+        loginMessage.className = 'form-message';
+        loginMessage.textContent = '';
+        
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            if (user.uid !== ADMIN_UID) {
+                await signOut(auth);
+                throw new Error('Access denied. This account is not authorized.');
+            }
+            
+            loginMessage.className = 'form-message success';
+            loginMessage.textContent = 'Login successful!';
+            
+            setTimeout(() => {
+                closeLoginModalFunc();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            loginMessage.className = 'form-message error';
+            
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                loginMessage.textContent = 'Invalid email or password.';
+            } else if (error.code === 'auth/too-many-requests') {
+                loginMessage.textContent = 'Too many failed attempts. Please try again later.';
+            } else {
+                loginMessage.textContent = error.message || 'Login failed. Please try again.';
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
+        }
     });
 }
 
-// Event listeners
+// Setup logout
+function setupLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    });
+}
+
+// Handle add video form
+function setupAddVideoForm() {
+    const addVideoBtn = document.getElementById('addVideoBtn');
+    const addVideoModal = document.getElementById('addVideoModal');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const cancelAddBtn = document.getElementById('cancelAddBtn');
+    const addVideoForm = document.getElementById('addVideoForm');
+    const formMessage = document.getElementById('formMessage');
+    
+    // Open modal
+    addVideoBtn.addEventListener('click', () => {
+        if (!isAdmin()) {
+            alert('You must be logged in to add videos.');
+            return;
+        }
+        addVideoModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+    
+    // Close modal
+    const closeAddVideoModal = () => {
+        addVideoModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+        addVideoForm.reset();
+        formMessage.className = 'form-message';
+        formMessage.textContent = '';
+    };
+    
+    closeAddModal.addEventListener('click', closeAddVideoModal);
+    cancelAddBtn.addEventListener('click', closeAddVideoModal);
+    
+    addVideoModal.addEventListener('click', (e) => {
+        if (e.target.id === 'addVideoModal') {
+            closeAddVideoModal();
+        }
+    });
+    
+    // Handle form submission
+    addVideoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const urlInput = document.getElementById('videoUrl');
+        const titleInput = document.getElementById('videoTitle');
+        const submitBtn = addVideoForm.querySelector('button[type="submit"]');
+        
+        const url = urlInput.value.trim();
+        const title = titleInput.value.trim();
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
+        formMessage.className = 'form-message';
+        formMessage.textContent = '';
+        
+        try {
+            await addVideo(url, title);
+            
+            // Success
+            formMessage.className = 'form-message success';
+            formMessage.textContent = 'Video added successfully!';
+            
+            // Reload videos
+            await loadVideos();
+            
+            // Close modal after a delay
+            setTimeout(() => {
+                closeAddVideoModal();
+            }, 1500);
+            
+        } catch (error) {
+            formMessage.className = 'form-message error';
+            formMessage.textContent = error.message || 'Failed to add video. Please try again.';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Video';
+        }
+    });
+}
+
+// Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    initGallery();
+    loadVideos();
+    setupLoginForm();
+    setupLogout();
+    setupAddVideoForm();
     
-    // Close modal on close button click
+    // Monitor authentication state
+    onAuthStateChanged(auth, (user) => {
+        updateAuthUI(user);
+    });
+    
+    // Close video modal
     document.getElementById('closeModal').addEventListener('click', closeModal);
-    
-    // Close modal on outside click
     document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target.id === 'modal') {
             closeModal();
         }
     });
     
-    // Close modal on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeModal();
+            const addVideoModal = document.getElementById('addVideoModal');
+            const loginModal = document.getElementById('loginModal');
+            
+            if (addVideoModal.classList.contains('active')) {
+                addVideoModal.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+            if (loginModal.classList.contains('active')) {
+                loginModal.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
         }
     });
 });
-

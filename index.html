@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ancient Art Gallery - Animated Masterpieces</title>
+    <title>MythiQ - Animated Art Gallery</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="title">Ancient Art Gallery</h1>
+            <h1 class="title">MythiQ</h1>
             <p class="subtitle">Animated Masterpieces from History</p>
+            <div class="header-actions">
+                <button class="add-video-btn" id="addVideoBtn" style="display: none;">+ Add Video</button>
+                <button class="login-btn" id="loginBtn">Login</button>
+                <button class="logout-btn" id="logoutBtn" style="display: none;">Logout</button>
+            </div>
         </header>
 
         <div class="gallery" id="gallery">
-            <!-- Videos will be dynamically inserted here -->
+            <div class="loading" id="loading">Loading videos...</div>
         </div>
 
         <div class="modal" id="modal">
@@ -25,9 +30,75 @@
                 </div>
             </div>
         </div>
+
+        <!-- Login Modal -->
+        <div class="modal" id="loginModal">
+            <div class="modal-content add-video-modal">
+                <span class="close" id="closeLoginModal">&times;</span>
+                <h2>Admin Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Password" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelLoginBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                    <div class="form-message" id="loginMessage"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Video Modal -->
+        <div class="modal" id="addVideoModal">
+            <div class="modal-content add-video-modal">
+                <span class="close" id="closeAddModal">&times;</span>
+                <h2>Add New Video</h2>
+                <form id="addVideoForm">
+                    <div class="form-group">
+                        <label for="videoUrl">YouTube URL</label>
+                        <input type="url" id="videoUrl" placeholder="https://youtube.com/watch?v=..." required>
+                        <small>Paste any YouTube video or Short URL</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoTitle">Title (optional)</label>
+                        <input type="text" id="videoTitle" placeholder="Video title">
+                        <small>Leave empty to auto-detect from YouTube</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelAddBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Video</button>
+                    </div>
+                    <div class="form-message" id="formMessage"></div>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        
+        window.firebaseApp = initializeApp({
+            apiKey: "AIzaSyB6KKNTHrl6KlNsCUny3qYW6VUaHVAPf2o",
+            authDomain: "garagesalemap-ebb22.firebaseapp.com",
+            projectId: "garagesalemap-ebb22",
+            storageBucket: "garagesalemap-ebb22.firebasestorage.app",
+            messagingSenderId: "106258864583",
+            appId: "1:106258864583:web:469a93e9a13c9d620f61e2"
+        });
+        
+        window.db = getFirestore(window.firebaseApp);
+        window.auth = getAuth(window.firebaseApp);
+    </script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
 

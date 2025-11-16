@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrate Videos to Firebase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #818cf8;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .success { background: rgba(34, 197, 94, 0.2); }
+        .error { background: rgba(239, 68, 68, 0.2); }
+    </style>
+</head>
+<body>
+    <h1>Migrate Existing Videos to Firebase</h1>
+    <p>This will add all existing videos to your Firebase Firestore database.</p>
+    <button id="migrateBtn">Migrate Videos</button>
+    <div id="status"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6KKNTHrl6KlNsCUny3qYW6VUaHVAPf2o",
+            authDomain: "garagesalemap-ebb22.firebaseapp.com",
+            projectId: "garagesalemap-ebb22",
+            storageBucket: "garagesalemap-ebb22.firebasestorage.app",
+            messagingSenderId: "106258864583",
+            appId: "1:106258864583:web:469a93e9a13c9d620f61e2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Existing videos
+        const existingVideos = [
+            { id: 'aT3UkaEc-FA', type: 'video', title: 'Ancient Art Animation 1', url: 'https://youtu.be/aT3UkaEc-FA' },
+            { id: 'H2DdT9jxkq4', type: 'video', title: 'Ancient Art Animation 2', url: 'https://youtu.be/H2DdT9jxkq4' },
+            { id: 'vfVGUEnBVmA', type: 'video', title: 'Ancient Art Animation 3', url: 'https://youtu.be/vfVGUEnBVmA' },
+            { id: 'oDzpjwDEGI0', type: 'video', title: 'Ancient Art Animation 4', url: 'https://youtu.be/oDzpjwDEGI0' },
+            { id: 'u7EmRd0GLhQ', type: 'shorts', title: 'Ancient Art Short 1', url: 'https://youtube.com/shorts/u7EmRd0GLhQ' },
+            { id: 'u-4QAEbLzDc', type: 'shorts', title: 'Ancient Art Short 2', url: 'https://youtube.com/shorts/u-4QAEbLzDc' },
+            { id: 'gnim33uJxzo', type: 'shorts', title: 'Ancient Art Short 3', url: 'https://youtube.com/shorts/gnim33uJxzo' },
+            { id: 'hDqcPVimlRU', type: 'shorts', title: 'Ancient Art Short 4', url: 'https://youtube.com/shorts/hDqcPVimlRU' },
+            { id: 'mm410EAjU9k', type: 'shorts', title: 'Ancient Art Short 5', url: 'https://youtube.com/shorts/mm410EAjU9k' },
+            { id: 'TmGP4hk5PXs', type: 'shorts', title: 'Ancient Art Short 6', url: 'https://youtube.com/shorts/TmGP4hk5PXs' },
+            { id: 'NhfekOfB2KE', type: 'shorts', title: 'Ancient Art Short 7', url: 'https://youtube.com/shorts/NhfekOfB2KE' },
+            { id: '5GB-vBxK8B8', type: 'shorts', title: 'Ancient Art Short 8', url: 'https://youtube.com/shorts/5GB-vBxK8B8' },
+            { id: 'Fm01PhdwcJ0', type: 'shorts', title: 'Ancient Art Short 9', url: 'https://youtube.com/shorts/Fm01PhdwcJ0' },
+            { id: 'g9WxDb2LtkQ', type: 'video', title: 'Ancient Art Animation 5', url: 'https://youtu.be/g9WxDb2LtkQ' },
+            { id: 'B1SXLTCgQZw', type: 'shorts', title: 'Ancient Art Short 10', url: 'https://youtube.com/shorts/B1SXLTCgQZw' },
+            { id: 'eJV6linf5rM', type: 'shorts', title: 'Ancient Art Short 11', url: 'https://youtube.com/shorts/eJV6linf5rM' },
+            { id: 'vtOYyp8PiMQ', type: 'shorts', title: 'Ancient Art Short 12', url: 'https://youtube.com/shorts/vtOYyp8PiMQ' },
+            { id: 'q7ixw5acIRc', type: 'shorts', title: 'Ancient Art Short 13', url: 'https://youtube.com/shorts/q7ixw5acIRc' }
+        ];
+
+        document.getElementById('migrateBtn').addEventListener('click', async () => {
+            const statusDiv = document.getElementById('status');
+            const btn = document.getElementById('migrateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Migrating...';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const video of existingVideos) {
+                try {
+                    await addDoc(collection(db, 'videos'), {
+                        ...video,
+                        createdAt: Timestamp.now()
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error('Error adding video:', video.id, error);
+                    errorCount++;
+                }
+            }
+
+            statusDiv.className = 'status ' + (errorCount === 0 ? 'success' : 'error');
+            statusDiv.innerHTML = `
+                <strong>Migration Complete!</strong><br>
+                Successfully added: ${successCount} videos<br>
+                Errors: ${errorCount} videos
+            `;
+
+            btn.disabled = false;
+            btn.textContent = 'Migrate Videos';
+        });
+    </script>
+</body>
+</html>
+
