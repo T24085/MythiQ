@@ -8,6 +8,28 @@ const auth = window.auth;
 // Admin UID - only this user can add videos
 const ADMIN_UID = 'AYILIKEKTUdizKXwNLKLrj2MDVT2';
 
+// Hardcoded videos as fallback (until Firebase is populated)
+const FALLBACK_VIDEOS = [
+    { id: 'aT3UkaEc-FA', type: 'video', title: 'Ancient Art Animation 1', url: 'https://youtu.be/aT3UkaEc-FA' },
+    { id: 'H2DdT9jxkq4', type: 'video', title: 'Ancient Art Animation 2', url: 'https://youtu.be/H2DdT9jxkq4' },
+    { id: 'vfVGUEnBVmA', type: 'video', title: 'Ancient Art Animation 3', url: 'https://youtu.be/vfVGUEnBVmA' },
+    { id: 'oDzpjwDEGI0', type: 'video', title: 'Ancient Art Animation 4', url: 'https://youtu.be/oDzpjwDEGI0' },
+    { id: 'u7EmRd0GLhQ', type: 'shorts', title: 'Ancient Art Short 1', url: 'https://youtube.com/shorts/u7EmRd0GLhQ' },
+    { id: 'u-4QAEbLzDc', type: 'shorts', title: 'Ancient Art Short 2', url: 'https://youtube.com/shorts/u-4QAEbLzDc' },
+    { id: 'gnim33uJxzo', type: 'shorts', title: 'Ancient Art Short 3', url: 'https://youtube.com/shorts/gnim33uJxzo' },
+    { id: 'hDqcPVimlRU', type: 'shorts', title: 'Ancient Art Short 4', url: 'https://youtube.com/shorts/hDqcPVimlRU' },
+    { id: 'mm410EAjU9k', type: 'shorts', title: 'Ancient Art Short 5', url: 'https://youtube.com/shorts/mm410EAjU9k' },
+    { id: 'TmGP4hk5PXs', type: 'shorts', title: 'Ancient Art Short 6', url: 'https://youtube.com/shorts/TmGP4hk5PXs' },
+    { id: 'NhfekOfB2KE', type: 'shorts', title: 'Ancient Art Short 7', url: 'https://youtube.com/shorts/NhfekOfB2KE' },
+    { id: '5GB-vBxK8B8', type: 'shorts', title: 'Ancient Art Short 8', url: 'https://youtube.com/shorts/5GB-vBxK8B8' },
+    { id: 'Fm01PhdwcJ0', type: 'shorts', title: 'Ancient Art Short 9', url: 'https://youtube.com/shorts/Fm01PhdwcJ0' },
+    { id: 'g9WxDb2LtkQ', type: 'video', title: 'Ancient Art Animation 5', url: 'https://youtu.be/g9WxDb2LtkQ' },
+    { id: 'B1SXLTCgQZw', type: 'shorts', title: 'Ancient Art Short 10', url: 'https://youtube.com/shorts/B1SXLTCgQZw' },
+    { id: 'eJV6linf5rM', type: 'shorts', title: 'Ancient Art Short 11', url: 'https://youtube.com/shorts/eJV6linf5rM' },
+    { id: 'vtOYyp8PiMQ', type: 'shorts', title: 'Ancient Art Short 12', url: 'https://youtube.com/shorts/vtOYyp8PiMQ' },
+    { id: 'q7ixw5acIRc', type: 'shorts', title: 'Ancient Art Short 13', url: 'https://youtube.com/shorts/q7ixw5acIRc' }
+];
+
 // Extract YouTube video ID from various URL formats
 function extractVideoId(url) {
     if (!url) return null;
@@ -156,7 +178,7 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// Load videos from Firebase
+// Load videos from Firebase with fallback to hardcoded list
 async function loadVideos() {
     const gallery = document.getElementById('gallery');
     const loading = document.getElementById('loading');
@@ -169,10 +191,17 @@ async function loadVideos() {
         gallery.innerHTML = '';
         
         if (querySnapshot.empty) {
-            gallery.innerHTML = '<div class="loading">No videos yet. Click "Add Video" to get started!</div>';
+            // Use fallback videos if Firebase is empty
+            console.log('Firebase is empty, using fallback videos');
+            FALLBACK_VIDEOS.forEach(video => {
+                const card = createVideoCard(video);
+                gallery.appendChild(card);
+            });
+            loading.style.display = 'none';
             return;
         }
         
+        // Use videos from Firebase
         querySnapshot.forEach((doc) => {
             const video = { id: doc.id, ...doc.data() };
             const card = createVideoCard(video);
@@ -181,8 +210,13 @@ async function loadVideos() {
         
         loading.style.display = 'none';
     } catch (error) {
-        console.error('Error loading videos:', error);
-        gallery.innerHTML = '<div class="loading" style="color: #ef4444;">Error loading videos. Please refresh the page.</div>';
+        console.error('Error loading videos from Firebase, using fallback:', error);
+        // On error, use fallback videos
+        gallery.innerHTML = '';
+        FALLBACK_VIDEOS.forEach(video => {
+            const card = createVideoCard(video);
+            gallery.appendChild(card);
+        });
         loading.style.display = 'none';
     }
 }
