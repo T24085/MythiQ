@@ -178,6 +178,17 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
+// Sort and organize videos: shorts first, then regular videos
+function organizeVideos(videos) {
+    // Separate shorts and regular videos
+    const shorts = videos.filter(v => v.type === 'shorts');
+    const regularVideos = videos.filter(v => v.type === 'video');
+    
+    // Sort each group by their original order (maintain order within type)
+    // Return shorts first, then regular videos
+    return [...shorts, ...regularVideos];
+}
+
 // Load videos from Firebase with fallback to hardcoded list
 async function loadVideos() {
     const gallery = document.getElementById('gallery');
@@ -185,25 +196,30 @@ async function loadVideos() {
     
     try {
         const videosRef = collection(db, 'videos');
-        const q = query(videosRef, orderBy('createdAt', 'desc'));
+        const q = query(videosRef, orderBy('createdAt', 'asc')); // Changed to 'asc' to fix reverse order
         const querySnapshot = await getDocs(q);
         
         gallery.innerHTML = '';
         
+        let videos = [];
+        
         if (querySnapshot.empty) {
             // Use fallback videos if Firebase is empty
             console.log('Firebase is empty, using fallback videos');
-            FALLBACK_VIDEOS.forEach(video => {
-                const card = createVideoCard(video);
-                gallery.appendChild(card);
+            videos = FALLBACK_VIDEOS;
+        } else {
+            // Use videos from Firebase
+            querySnapshot.forEach((doc) => {
+                const video = { id: doc.id, ...doc.data() };
+                videos.push(video);
             });
-            loading.style.display = 'none';
-            return;
         }
         
-        // Use videos from Firebase
-        querySnapshot.forEach((doc) => {
-            const video = { id: doc.id, ...doc.data() };
+        // Organize videos: shorts first, then regular videos
+        const organizedVideos = organizeVideos(videos);
+        
+        // Create and append cards in organized order
+        organizedVideos.forEach(video => {
             const card = createVideoCard(video);
             gallery.appendChild(card);
         });
@@ -213,7 +229,8 @@ async function loadVideos() {
         console.error('Error loading videos from Firebase, using fallback:', error);
         // On error, use fallback videos
         gallery.innerHTML = '';
-        FALLBACK_VIDEOS.forEach(video => {
+        const organizedVideos = organizeVideos(FALLBACK_VIDEOS);
+        organizedVideos.forEach(video => {
             const card = createVideoCard(video);
             gallery.appendChild(card);
         });
