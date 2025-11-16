@@ -181,10 +181,15 @@ function closeModal() {
 // Sort and organize videos: shorts first, then regular videos
 function organizeVideos(videos) {
     // Separate shorts and regular videos
-    const shorts = videos.filter(v => v.type === 'shorts');
-    const regularVideos = videos.filter(v => v.type === 'video');
+    const shorts = videos.filter(v => v.type === 'shorts' || v.type === 'Short');
+    const regularVideos = videos.filter(v => v.type === 'video' || v.type === 'Video' || (!v.type || (v.type !== 'shorts' && v.type !== 'Short')));
     
-    // Sort each group by their original order (maintain order within type)
+    console.log('Organizing videos:', {
+        total: videos.length,
+        shorts: shorts.length,
+        regular: regularVideos.length
+    });
+    
     // Return shorts first, then regular videos
     return [...shorts, ...regularVideos];
 }
@@ -219,8 +224,10 @@ async function loadVideos() {
         const organizedVideos = organizeVideos(videos);
         
         // Create and append cards in organized order
-        organizedVideos.forEach(video => {
+        // Add a data attribute to help with ordering
+        organizedVideos.forEach((video, index) => {
             const card = createVideoCard(video);
+            card.setAttribute('data-order', index);
             gallery.appendChild(card);
         });
         
