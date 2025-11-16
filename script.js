@@ -178,28 +178,28 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// Sort and organize videos: shorts first, then regular videos
+// Sort and organize videos: regular videos first (wider), then shorts (taller)
 function organizeVideos(videos) {
-    // Separate shorts and regular videos
-    const shorts = videos.filter(v => {
-        const type = v.type?.toLowerCase();
-        return type === 'shorts' || type === 'short';
-    });
+    // Separate regular videos and shorts
     const regularVideos = videos.filter(v => {
         const type = v.type?.toLowerCase();
         return type === 'video' || !type || (type !== 'shorts' && type !== 'short');
     });
+    const shorts = videos.filter(v => {
+        const type = v.type?.toLowerCase();
+        return type === 'shorts' || type === 'short';
+    });
     
     console.log('Organizing videos:', {
         total: videos.length,
-        shorts: shorts.length,
         regular: regularVideos.length,
-        firstShort: shorts[0]?.id,
-        firstRegular: regularVideos[0]?.id
+        shorts: shorts.length,
+        firstRegular: regularVideos[0]?.id,
+        firstShort: shorts[0]?.id
     });
     
-    // Return shorts first, then regular videos (maintain original order within each group)
-    return [...shorts, ...regularVideos];
+    // Return regular videos first (wider), then shorts (taller)
+    return [...regularVideos, ...shorts];
 }
 
 // Load videos from Firebase with fallback to hardcoded list

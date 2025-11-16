@@ -137,14 +137,14 @@ body {
     border: 1px solid var(--border);
 }
 
-.video-card[data-video-type="shorts"] {
-    aspect-ratio: 9 / 16;
-    order: 1; /* Force shorts to appear first */
-}
-
 .video-card[data-video-type="video"] {
     aspect-ratio: 16 / 9;
-    order: 2; /* Regular videos appear after shorts */
+    order: 1; /* Regular videos (wider) appear first */
+}
+
+.video-card[data-video-type="shorts"] {
+    aspect-ratio: 9 / 16;
+    order: 2; /* Shorts (taller) appear after regular videos */
 }
 
 .video-card:hover {
