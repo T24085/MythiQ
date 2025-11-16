@@ -245,24 +245,79 @@ async function loadVideos() {
         
         // Organize videos: regular videos first, then shorts
         const organizedVideos = organizeVideos(videos);
-        
-        // Create and append cards in organized order
-        organizedVideos.forEach((video, index) => {
-            const card = createVideoCard(video);
-            card.setAttribute('data-order', index);
-            gallery.appendChild(card);
+        const regularVideos = organizedVideos.filter(v => {
+            const type = v.type?.toLowerCase();
+            return type === 'video' || !type || (type !== 'shorts' && type !== 'short');
         });
+        const shorts = organizedVideos.filter(v => {
+            const type = v.type?.toLowerCase();
+            return type === 'shorts' || type === 'short';
+        });
+        
+        // Create separate sections for regular videos and shorts
+        gallery.innerHTML = '';
+        
+        // Regular videos section
+        if (regularVideos.length > 0) {
+            const regularSection = document.createElement('div');
+            regularSection.className = 'video-section regular-videos';
+            regularVideos.forEach((video, index) => {
+                const card = createVideoCard(video);
+                card.setAttribute('data-order', index);
+                regularSection.appendChild(card);
+            });
+            gallery.appendChild(regularSection);
+        }
+        
+        // Shorts section
+        if (shorts.length > 0) {
+            const shortsSection = document.createElement('div');
+            shortsSection.className = 'video-section shorts';
+            shorts.forEach((video, index) => {
+                const card = createVideoCard(video);
+                card.setAttribute('data-order', index);
+                shortsSection.appendChild(card);
+            });
+            gallery.appendChild(shortsSection);
+        }
         
     } catch (error) {
         console.error('Error loading videos from Firebase, using fallback:', error);
         // On error, use fallback videos
         gallery.innerHTML = '';
         const organizedVideos = organizeVideos(FALLBACK_VIDEOS);
-        organizedVideos.forEach((video, index) => {
-            const card = createVideoCard(video);
-            card.setAttribute('data-order', index);
-            gallery.appendChild(card);
+        const regularVideos = organizedVideos.filter(v => {
+            const type = v.type?.toLowerCase();
+            return type === 'video' || !type || (type !== 'shorts' && type !== 'short');
         });
+        const shorts = organizedVideos.filter(v => {
+            const type = v.type?.toLowerCase();
+            return type === 'shorts' || type === 'short';
+        });
+        
+        // Regular videos section
+        if (regularVideos.length > 0) {
+            const regularSection = document.createElement('div');
+            regularSection.className = 'video-section regular-videos';
+            regularVideos.forEach((video, index) => {
+                const card = createVideoCard(video);
+                card.setAttribute('data-order', index);
+                regularSection.appendChild(card);
+            });
+            gallery.appendChild(regularSection);
+        }
+        
+        // Shorts section
+        if (shorts.length > 0) {
+            const shortsSection = document.createElement('div');
+            shortsSection.className = 'video-section shorts';
+            shorts.forEach((video, index) => {
+                const card = createVideoCard(video);
+                card.setAttribute('data-order', index);
+                shortsSection.appendChild(card);
+            });
+            gallery.appendChild(shortsSection);
+        }
     }
 }
 
