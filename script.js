@@ -103,21 +103,31 @@ function getEmbedUrl(videoId, type = 'video') {
     return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
 }
 
-// Create video card element
+// Create video card element with embedded autoplaying video
 function createVideoCard(video) {
     const card = document.createElement('div');
     card.className = 'video-card';
     card.setAttribute('data-video-id', video.id);
     card.setAttribute('data-video-type', video.type);
 
-    const thumbnail = document.createElement('img');
-    thumbnail.className = 'video-thumbnail';
-    thumbnail.alt = video.title;
-    thumbnail.loading = 'lazy';
-    loadThumbnailWithFallback(thumbnail, video.id);
+    // Create iframe for embedded video (autoplay, muted, loop)
+    const videoIframe = document.createElement('iframe');
+    videoIframe.className = 'video-embed';
+    videoIframe.src = `https://www.youtube.com/embed/${video.id}?autoplay=1&mute=1&loop=1&playlist=${video.id}&controls=0&modestbranding=1&rel=0&playsinline=1`;
+    videoIframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    videoIframe.setAttribute('allowfullscreen', 'true');
+    videoIframe.setAttribute('frameborder', '0');
+    videoIframe.setAttribute('title', video.title || 'Video');
+    videoIframe.style.width = '100%';
+    videoIframe.style.height = '100%';
+    videoIframe.style.border = 'none';
+    videoIframe.style.position = 'absolute';
+    videoIframe.style.top = '0';
+    videoIframe.style.left = '0';
 
     const playButton = document.createElement('div');
     playButton.className = 'play-button';
+    playButton.style.pointerEvents = 'none'; // Allow clicks to pass through to iframe
 
     const overlay = document.createElement('div');
     overlay.className = 'video-overlay';
@@ -152,12 +162,19 @@ function createVideoCard(video) {
         }
     });
     
-    card.appendChild(thumbnail);
+    card.appendChild(videoIframe);
     card.appendChild(playButton);
     card.appendChild(overlay);
     card.appendChild(deleteButton);
 
-    card.addEventListener('click', () => openModal(video.id, video.type));
+    // Click to open full-screen modal
+    card.addEventListener('click', (e) => {
+        // Don't open modal if clicking delete button
+        if (e.target === deleteButton || deleteButton.contains(e.target)) {
+            return;
+        }
+        openModal(video.id, video.type);
+    });
 
     return card;
 }
