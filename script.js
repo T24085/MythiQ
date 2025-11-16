@@ -205,7 +205,6 @@ function organizeVideos(videos) {
 // Load videos from Firebase with fallback to hardcoded list
 async function loadVideos() {
     const gallery = document.getElementById('gallery');
-    const loading = document.getElementById('loading');
     
     try {
         const videosRef = collection(db, 'videos');
@@ -228,17 +227,16 @@ async function loadVideos() {
             });
         }
         
-        // Organize videos: shorts first, then regular videos
+        // Organize videos: regular videos first, then shorts
         const organizedVideos = organizeVideos(videos);
         
-        // Create and append cards in organized order (shorts first)
+        // Create and append cards in organized order
         organizedVideos.forEach((video, index) => {
             const card = createVideoCard(video);
             card.setAttribute('data-order', index);
             gallery.appendChild(card);
         });
         
-        loading.style.display = 'none';
     } catch (error) {
         console.error('Error loading videos from Firebase, using fallback:', error);
         // On error, use fallback videos
@@ -249,7 +247,6 @@ async function loadVideos() {
             card.setAttribute('data-order', index);
             gallery.appendChild(card);
         });
-        loading.style.display = 'none';
     }
 }
 
