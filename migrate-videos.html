@@ -39,12 +39,30 @@
 <body>
     <h1>Migrate Existing Videos to Firebase</h1>
     <p>This will add all existing videos to your Firebase Firestore database.</p>
-    <button id="migrateBtn">Migrate Videos</button>
-    <div id="status"></div>
+    
+    <div id="loginSection">
+        <h2>Login Required</h2>
+        <p>You must be logged in to migrate videos.</p>
+        <div style="margin: 20px 0;">
+            <input type="email" id="loginEmail" placeholder="Email" style="width: 300px; padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #444; background: #2a2a2a; color: #fff;">
+            <br>
+            <input type="password" id="loginPassword" placeholder="Password" style="width: 300px; padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #444; background: #2a2a2a; color: #fff;">
+            <br>
+            <button id="loginBtn" style="margin-top: 10px;">Login</button>
+        </div>
+        <div id="loginStatus" style="margin-top: 10px;"></div>
+    </div>
+    
+    <div id="migrateSection" style="display: none;">
+        <p style="color: #22c55e;">✓ Logged in successfully!</p>
+        <button id="migrateBtn">Migrate Videos</button>
+        <div id="status"></div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB6KKNTHrl6KlNsCUny3qYW6VUaHVAPf2o",
@@ -57,6 +75,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // Existing videos
         const existingVideos = [
@@ -80,7 +99,55 @@
             { id: 'q7ixw5acIRc', type: 'shorts', title: 'Ancient Art Short 13', url: 'https://youtube.com/shorts/q7ixw5acIRc' }
         ];
 
+        // Setup login
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const loginStatus = document.getElementById('loginStatus');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!email || !password) {
+                loginStatus.innerHTML = '<span style="color: #ef4444;">Please enter email and password</span>';
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            loginStatus.innerHTML = '';
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                loginStatus.innerHTML = '<span style="color: #22c55e;">Login successful!</span>';
+            } catch (error) {
+                console.error('Login error:', error);
+                loginStatus.innerHTML = '<span style="color: #ef4444;">Login failed: ' + (error.message || 'Invalid credentials') + '</span>';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+        
+        // Monitor auth state
+        onAuthStateChanged(auth, (user) => {
+            const loginSection = document.getElementById('loginSection');
+            const migrateSection = document.getElementById('migrateSection');
+            
+            if (user) {
+                loginSection.style.display = 'none';
+                migrateSection.style.display = 'block';
+            } else {
+                loginSection.style.display = 'block';
+                migrateSection.style.display = 'none';
+            }
+        });
+        
+        // Setup migration
         document.getElementById('migrateBtn').addEventListener('click', async () => {
+            // Check authentication
+            if (!auth.currentUser) {
+                alert('You must be logged in to migrate videos.');
+                return;
+            }
+            
             const statusDiv = document.getElementById('status');
             const btn = document.getElementById('migrateBtn');
             btn.disabled = true;
